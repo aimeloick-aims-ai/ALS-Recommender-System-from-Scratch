@@ -10,6 +10,7 @@ The repository contains the full path from data preparation to model training, a
   <img src="assets/readme/interface.png" width="900" alt="MovieFlix recommender interface">
 </p>
 Website: https://aims-course-service-aimeloick-aims-ai-186773437176.europe-west2.run.app/app_scale/
+
 ---
 
 ## What is implemented
@@ -70,22 +71,47 @@ Let
 
 The prediction used by the core ALS model is
 
-$$
-\hat r_{ui} = \mathbf{u}_u^\top \mathbf{v}_i + b_u + b_i.
-$$
+```math
+\hat{r}_{ui}
+=
+\mathbf{u}_u^\top \mathbf{v}_i
++
+b_u
++
+b_i
+```
 
 The implementation minimizes the regularized objective
 
-$$
-\mathcal{L} =
+```math
+\mathcal{L}
+=
 \frac{\lambda}{2}
 \sum_{(u,i)\in\Omega}
-\left(r_{ui} - \mathbf{u}_u^\top\mathbf{v}_i - b_u - b_i\right)^2
-+ \frac{\tau}{2}
-\left(\sum_u \|\mathbf{u}_u\|_2^2 + \sum_i \|\mathbf{v}_i\|_2^2\right)
-+ \frac{\gamma}{2}
-\left(\sum_u b_u^2 + \sum_i b_i^2\right).
-$$
+\left(
+r_{ui}
+-
+\mathbf{u}_u^\top \mathbf{v}_i
+-
+b_u
+-
+b_i
+\right)^2
++
+\frac{\tau}{2}
+\left(
+\sum_u \|\mathbf{u}_u\|_2^2
++
+\sum_i \|\mathbf{v}_i\|_2^2
+\right)
++
+\frac{\gamma}{2}
+\left(
+\sum_u b_u^2
++
+\sum_i b_i^2
+\right)
+```
 
 Here:
 
@@ -100,45 +126,79 @@ The full problem is not jointly convex in $U$ and $V$. ALS makes it manageable b
 
 For a fixed set of item vectors, the user update is
 
-$$
-\mathbf{u}_u \leftarrow
+```math
+\mathbf{u}_u
+\leftarrow
 \left(
-\lambda\sum_{i\in\Omega(u)} \mathbf{v}_i\mathbf{v}_i^\top + \tau I
+\lambda
+\sum_{i\in\Omega(u)}
+\mathbf{v}_i\mathbf{v}_i^\top
++
+\tau I
 \right)^{-1}
 \left(
-\lambda\sum_{i\in\Omega(u)}
+\lambda
+\sum_{i\in\Omega(u)}
 (r_{ui}-b_u-b_i)\mathbf{v}_i
-\right).
-$$
+\right)
+```
 
 Likewise, for an item $i$,
 
-$$
-\mathbf{v}_i \leftarrow
+```math
+\mathbf{v}_i
+\leftarrow
 \left(
-\lambda\sum_{u\in\Omega(i)} \mathbf{u}_u\mathbf{u}_u^\top + \tau I
+\lambda
+\sum_{u\in\Omega(i)}
+\mathbf{u}_u\mathbf{u}_u^\top
++
+\tau I
 \right)^{-1}
 \left(
-\lambda\sum_{u\in\Omega(i)}
+\lambda
+\sum_{u\in\Omega(i)}
 (r_{ui}-b_u-b_i)\mathbf{u}_u
-\right).
-$$
+\right)
+```
 
 The corresponding bias updates implemented in the code are
 
-$$
-b_u \leftarrow
-\frac{\lambda\sum_{i\in\Omega(u)}
-(r_{ui}-\mathbf{u}_u^\top\mathbf{v}_i-b_i)}
-{\lambda|\Omega(u)|+\gamma},
-$$
+```math
+b_u
+\leftarrow
+\frac{
+\lambda
+\sum_{i\in\Omega(u)}
+\left(
+r_{ui}
+-
+\mathbf{u}_u^\top \mathbf{v}_i
+-
+b_i
+\right)
+}{
+\lambda|\Omega(u)| + \gamma
+}
+```
 
-$$
-b_i \leftarrow
-\frac{\lambda\sum_{u\in\Omega(i)}
-(r_{ui}-\mathbf{u}_u^\top\mathbf{v}_i-b_u)}
-{\lambda|\Omega(i)|+\gamma}.
-$$
+```math
+b_i
+\leftarrow
+\frac{
+\lambda
+\sum_{u\in\Omega(i)}
+\left(
+r_{ui}
+-
+\mathbf{u}_u^\top \mathbf{v}_i
+-
+b_u
+\right)
+}{
+\lambda|\Omega(i)| + \gamma
+}
+```
 
 The actual linear solves are implemented in [`models/als_core.py`](models/als_core.py) and parallelized with Numba.
 
@@ -148,9 +208,9 @@ The actual linear solves are implemented in [`models/als_core.py`](models/als_co
 
 Before learning latent factors, I trained a bias-only recommender:
 
-$$
-\hat r_{ui}=b_u+b_i.
-$$
+```math
+\hat{r}_{ui}=b_u+b_i
+```
 
 This simple model is useful because ratings contain strong systematic effects: some users almost always rate high, others low, and some movies receive consistently better ratings than others.
 
@@ -202,33 +262,46 @@ Pure collaborative filtering has a structural limitation: if a movie has very fe
 
 The feature-aware model learns a latent vector $\mathbf{f}_g$ for each genre and defines an item-side prior
 
-$$
-\mathbf{s}_i =
+```math
+\mathbf{s}_i
+=
 \frac{1}{\sqrt{|F_i|}}
-\sum_{g\in F_i} \mathbf{f}_g,
-$$
+\sum_{g\in F_i}
+\mathbf{f}_g
+```
 
 where $F_i$ is the set of genres associated with movie $i$.
 
 The item vector is then encouraged to stay close to that feature representation:
 
-$$
+```math
 \frac{\tau}{2}
-\sum_i \|\mathbf{v}_i-\mathbf{s}_i\|_2^2.
-$$
+\sum_i
+\left\|
+\mathbf{v}_i - \mathbf{s}_i
+\right\|_2^2
+```
 
 The implementation also regularizes the user and feature vectors. The item update therefore becomes, conceptually,
 
-$$
-\mathbf{v}_i \leftarrow
+```math
+\mathbf{v}_i
+\leftarrow
 \left(
-\lambda\sum_{u\in\Omega(i)} \mathbf{u}_u\mathbf{u}_u^\top + \tau I
+\lambda
+\sum_{u\in\Omega(i)}
+\mathbf{u}_u\mathbf{u}_u^\top
++
+\tau I
 \right)^{-1}
 \left[
-\lambda\sum_{u\in\Omega(i)}(r_{ui}-b_u-b_i)\mathbf{u}_u
-+ \tau\mathbf{s}_i
-\right].
-$$
+\lambda
+\sum_{u\in\Omega(i)}
+(r_{ui}-b_u-b_i)\mathbf{u}_u
++
+\tau\mathbf{s}_i
+\right]
+```
 
 This gives low-degree items a meaningful prior instead of letting regularization simply collapse their vectors toward zero.
 
@@ -246,9 +319,9 @@ I also used the latent vectors to study which movies are represented as particul
 
 The working definition used in the project is
 
-$$
-P_i = \|\mathbf{v}_i\|_2.
-$$
+```math
+P_i = \|\mathbf{v}_i\|_2
+```
 
 A large norm means that the item lies far from the origin of the latent space and can therefore induce large positive or negative interactions depending on the user's direction.
 
@@ -273,15 +346,23 @@ A new user vector is inferred from the rated item by solving the same regularize
 
 For ranking, the standard score is
 
-$$
-s_i = \mathbf{u}^\top\mathbf{v}_i + b_i.
-$$
+```math
+s_i
+=
+\mathbf{u}^\top\mathbf{v}_i
++
+b_i
+```
 
 I also tested a reduced item-bias score
 
-$$
-s_i^{(0.05)} = \mathbf{u}^\top\mathbf{v}_i + 0.05\,b_i,
-$$
+```math
+s_i^{(0.05)}
+=
+\mathbf{u}^\top\mathbf{v}_i
++
+0.05\,b_i
+```
 
 because a large item bias can push globally popular movies upward even when their latent direction is less aligned with the user's profile.
 
@@ -303,38 +384,50 @@ A recommender should not stop at *"you may like this movie"*. For debugging and 
 
 For a user $u$, the explainer constructs
 
-$$
-A_u =
-\lambda\sum_{j\in\Omega(u)} c_{uj}\mathbf{v}_j\mathbf{v}_j^\top
-+ \tau I,
-$$
+```math
+A_u
+=
+\lambda
+\sum_{j\in\Omega(u)}
+c_{uj}
+\mathbf{v}_j\mathbf{v}_j^\top
++
+\tau I
+```
 
 and transforms the target item vector as
 
-$$
-\tilde{\mathbf{v}}_i = A_u^{-1}\mathbf{v}_i.
-$$
+```math
+\tilde{\mathbf{v}}_i
+=
+A_u^{-1}\mathbf{v}_i
+```
 
 The contribution of a previously rated item $j$ is then
 
-$$
+```math
 C_{j\rightarrow i}
-= \tilde{\mathbf{v}}_i^\top\mathbf{v}_j\,c_{uj}.
-$$
+=
+\tilde{\mathbf{v}}_i^\top
+\mathbf{v}_j
+\,c_{uj}
+```
 
-The current implementation can use the rating itself as $c_{uj}$, and sorts the historical items by this contribution. See [`explainer/contribution_items_passed.py`](explainer/contribution_items_passed.py).
+In the current explainer, $c_{uj}$ can be taken either from the observed rating or as a binary interaction weight, depending on the explainer variant. The historical items are then sorted by contribution. See [`explainer/contribution_items_passed.py`](explainer/contribution_items_passed.py).
 
 For the feature-aware model, a genre contribution is computed directly from the user's latent vector and the learned feature vector:
 
-$$
+```math
 C_{g\rightarrow i}
 =
 \mathbf{u}_u^\top
 \left(
-\frac{1}{\sqrt{|F_i|}}\mathbf{f}_g
+\frac{1}{\sqrt{|F_i|}}
+\mathbf{f}_g
 \right),
-\qquad g\in F_i.
-$$
+\qquad
+g\in F_i
+```
 
 This is implemented in [`explainer/contribution_features.py`](explainer/contribution_features.py).
 
