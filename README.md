@@ -9,7 +9,7 @@ The repository contains the full path from data preparation to model training, a
 <p align="center">
   <img src="assets/readme/interface.png" width="900" alt="MovieFlix recommender interface">
 </p>
-
+Website: https://aims-course-service-aimeloick-aims-ai-186773437176.europe-west2.run.app/app_scale/
 ---
 
 ## What is implemented
